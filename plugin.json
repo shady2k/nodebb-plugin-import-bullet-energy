@@ -2,7 +2,7 @@
 	"id": "nodebb-plugin-import-bullet-energy",
 	"name": "nodebb-plugin-import-bullet-energy",
 	"description": "Exporter for Bullet Energy forum compatible with nodebb-plugin-import",
-	"url": "https://github.com/akhoury/nodebb-plugin-bullet-energy",
+	"url": "https://github.com/shady2k/nodebb-plugin-bullet-energy",
 	"library": "./admin/index.js",
 	"hooks": [
 		{ "hook": "filter:admin.header.build", "method": "admin.menu"},

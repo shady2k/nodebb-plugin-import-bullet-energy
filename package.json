@@ -1,17 +1,19 @@
 {
-    "name": "nodebb-plugin-import-ubb",
-    "version": "0.1.3",
-    "description": "a UBB forum exporter to import-ready files",
+    "name": "nodebb-plugin-import-bullet-energy",
+    "version": "0.0.1",
+    "description": "a Bullet Energy forum exporter to import-ready files",
     "main": "./index.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/akhoury/nodebb-plugin-import-ubb"
+        "url": "https://github.com/shady2k/nodebb-plugin-import-bullet-energy"
     },
     "keywords": [
-        "ubb",
+        "bullet energy",
+        "be",
+        "dle",
         "nodebb",
         "plugin",
         "migrate",
@@ -20,12 +22,12 @@
         "import"
     ],
     "author": {
-        "name": "akhoury",
-        "email": "bentael@gmail.com"
+        "name": "shady2k",
+        "email": "shady2k@gmail.com"
     },
     "license": "MIT",
     "bugs": {
-        "url": "https://github.com/akhoury/nodebb-plugin-import-ubb/issues"
+        "url": "https://github.com/shady2k/nodebb-plugin-import-bullet-energy/issues"
     },
     "dependencies": {
         "underscore": "~1.6.0",

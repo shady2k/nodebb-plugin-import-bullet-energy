@@ -1,9 +1,8 @@
-
 var async = require('async');
 var mysql = require('mysql');
 var _ = require('underscore');
 var noop = function(){};
-var logPrefix = '[nodebb-plugin-import-ubb]';
+var logPrefix = '[nodebb-plugin-import-bullet-energy]';
 
 (function(Exporter) {
 
@@ -17,7 +16,7 @@ var logPrefix = '[nodebb-plugin-import-ubb]';
             user: config.dbuser || config.user || 'root',
             password: config.dbpass || config.pass || config.password || '',
             port: config.dbport || config.port || 3306,
-            database: config.dbname || config.name || config.database || 'ubb'
+            database: config.dbname || config.name || config.database || 'dle'
         };
 
         Exporter.config(_config);
@@ -39,27 +38,18 @@ var logPrefix = '[nodebb-plugin-import-ubb]';
         var prefix = Exporter.config('prefix');
         var startms = +new Date();
         var query = 'SELECT '
-            + prefix + 'USERS.USER_ID as _uid, '
-            + prefix + 'USERS.USER_LOGIN_NAME as _username, '
-            + prefix + 'USERS.USER_DISPLAY_NAME as _alternativeUsername, '
-            + prefix + 'USERS.USER_REGISTRATION_EMAIL as _registrationEmail, '
-            + prefix + 'USERS.USER_MEMBERSHIP_LEVEL as _level, '
-            + prefix + 'USERS.USER_REGISTERED_ON as _joindate, '
-            + prefix + 'USERS.USER_IS_banned as _banned, '
-            + prefix + 'USER_PROFILE.USER_REAL_EMAIL as _email, '
-            + prefix + 'USER_PROFILE.USER_SIGNATURE as _signature, '
-            + prefix + 'USER_PROFILE.USER_HOMEPAGE as _website, '
-            + prefix + 'USER_PROFILE.USER_OCCUPATION as _occupation, '
-            + prefix + 'USER_PROFILE.USER_LOCATION as _location, '
-            + prefix + 'USER_PROFILE.USER_AVATAR as _picture, '
-            + prefix + 'USER_PROFILE.USER_TITLE as _title, '
-            + prefix + 'USER_PROFILE.USER_RATING as _reputation, '
-            + prefix + 'USER_PROFILE.USER_TOTAL_RATES as _profileviews, '
-            + prefix + 'USER_PROFILE.USER_BIRTHDAY as _birthday '
+            'USER_ID as _uid, '
+            'NAME as _username, '
+            'FULLNAME as _alternativeUsername, '
+            'REG_DATE as _joindate, '
+            'EMAIL as _email, '
+            'IF(BANNED = "yes", 1, 0) as _banned, '			
+            'SIGNATURE as _signature, '
+            'LAND as _location, '
+            'CONCAT("http://mcfine.ru/uploads/fotos/", FOTO) as _picture '
 
-            + 'FROM ' + prefix + 'USERS, ' + prefix + 'USER_PROFILE '
-            + 'WHERE ' + prefix + 'USERS.USER_ID = ' + prefix + 'USER_PROFILE.USER_ID '
-            + (start >= 0 && limit >= 0 ? 'LIMIT ' + start + ',' + limit : '');
+            + 'FROM ' + prefix + 'be_users '
+            + 'WHERE ' + (start >= 0 && limit >= 0 ? 'LIMIT ' + start + ',' + limit : '');
 
 
         if (!Exporter.connection) {
@@ -110,11 +100,9 @@ var logPrefix = '[nodebb-plugin-import-ubb]';
         var prefix = Exporter.config('prefix');
         var startms = +new Date();
         var query = 'SELECT '
-            + prefix + 'FORUMS.FORUM_ID as _cid, '
-            + prefix + 'FORUMS.FORUM_TITLE as _name, '
-            + prefix + 'FORUMS.FORUM_DESCRIPTION as _description, '
-            + prefix + 'FORUMS.FORUM_CREATED_ON as _timestamp '
-            + 'FROM ' + prefix + 'FORUMS '
+            'tree_id as _cid, '
+            'tree_title as _name '
+            + 'FROM ' + prefix + 'be_tree '
             + (start >= 0 && limit >= 0 ? 'LIMIT ' + start + ',' + limit : '');
 
 
@@ -134,8 +122,8 @@ var logPrefix = '[nodebb-plugin-import-ubb]';
                 //normalize here
                 var map = {};
                 rows.forEach(function(row) {
-                    row._name = row._name || 'Untitled Category '
-                    row._description = row._description || 'No decsciption available';
+                    row._name = row._name || 'Без названия '
+                    row._description = row._description || '';
                     row._timestamp = ((row._timestamp || 0) * 1000) || startms;
     
                     map[row._cid] = row;
@@ -156,44 +144,44 @@ var logPrefix = '[nodebb-plugin-import-ubb]';
         var startms = +new Date();
         var query =
             'SELECT '
-            + prefix + 'TOPICS.TOPIC_ID as _tid, '
+            + prefix + 'be_topic.ID as _tid, '
 
             // aka category id, or cid
-            + prefix + 'TOPICS.FORUM_ID as _cid, '
+            + prefix + 'be_topic.id_parent as _cid, '
 
             // this is the 'parent-post'
             // see https://github.com/akhoury/nodebb-plugin-import#important-note-on-topics-and-posts
             // I don't really need it since I just do a simple join and get its content, but I will include for the reference
             // remember: this post is EXCLUDED in the getPosts() function
-            + prefix + 'TOPICS.POST_ID as _pid, '
+            //+ prefix + 'TOPICS.POST_ID as _pid, '
 
-            + prefix + 'TOPICS.USER_ID as _uid, '
-            + prefix + 'TOPICS.TOPIC_VIEWS as _viewcount, '
-            + prefix + 'TOPICS.TOPIC_SUBJECT as _title, '
-            + prefix + 'TOPICS.TOPIC_CREATED_TIME as _timestamp, '
+            + prefix + 'be_topic.author_id as _uid, '
+            + prefix + 'be_topic.view_count as _viewcount, '
+            + prefix + 'be_topic.title as _title, '
+            + prefix + 'be_topic.post_date as _timestamp, '
 
             // maybe use that to skip
-            + prefix + 'TOPICS.TOPIC_IS_APPROVED as _approved, '
+            //+ prefix + 'TOPICS.TOPIC_IS_APPROVED as _approved, '
 
             // todo:  figure out what this means,
-            + prefix + 'TOPICS.TOPIC_STATUS as _status, '
+            //+ prefix + 'TOPICS.TOPIC_STATUS as _status, '
 
-            + prefix + 'TOPICS.TOPIC_IS_STICKY as _pinned, '
+            + prefix + 'be_topic.topic_fixed as _pinned, '
 
             // I dont need it, but if it should be 0 per UBB logic, since this post is not replying to anything, it's the parent-post of the topic
-            + prefix + 'POSTS.POST_PARENT_ID as _post_replying_to, '
+            + prefix + 'be_message.TREE_ID as _post_replying_to, '
 
             // this should be == to the _tid on top of this query
-            + prefix + 'POSTS.TOPIC_ID as _post_tid, '
+            + prefix + 'be_message.ID_TOPIC as _post_tid, '
 
             // and there is the content I need !!
-            + prefix + 'POSTS.POST_BODY as _content '
+            + prefix + 'be_message.MESSAGE_TEXT as _content '
 
-            + 'FROM ' + prefix + 'TOPICS, ' + prefix + 'POSTS '
+            + 'FROM ' + prefix + 'be_topic, ' + prefix + 'be_message '
             // see
-            + 'WHERE ' + prefix + 'TOPICS.TOPIC_ID=' + prefix + 'POSTS.TOPIC_ID '
+            + 'WHERE ' + prefix + 'be_topic.ID=' + prefix + 'be_message.ID_TOPIC '
             // and this one must be a parent
-            + 'AND ' + prefix + 'POSTS.POST_PARENT_ID=0 '
+            + 'AND ' + prefix + 'be_message.POSITION=0 '
             + (start >= 0 && limit >= 0 ? 'LIMIT ' + start + ',' + limit : '');
 
         if (!Exporter.connection) {
@@ -233,26 +221,26 @@ var logPrefix = '[nodebb-plugin-import-ubb]';
         var prefix = Exporter.config('prefix');
         var startms = +new Date();
         var query =
-            'SELECT POST_ID as _pid, '
-            + 'POST_PARENT_ID as _post_replying_to, '
-            + 'TOPIC_ID as _tid, '
-            + 'POST_POSTED_TIME as _timestamp, '
+            'SELECT ID as _pid, '
+            + '(SELECT ID FROM '+ prefix + 'be_message WHERE ID_TOPIC = t1.ID_TOPIC AND POSITION = t1.POSITION - 1) as _post_replying_to, '
+            + 'ID_TOPIC as _tid, '
+            + 'MESSAGE_DATE as _timestamp, '
             // not being used
-            + 'POST_SUBJECT as _subject, '
+            //+ 'POST_SUBJECT as _subject, '
 
-            + 'POST_BODY as _content, '
-            + 'USER_ID as _uid, '
+            + 'MESSAGE_TEXT as _content, '
+            + 'AUTORS_ID as _uid, '
 
             // I couldn't tell what's the different, they're all HTML to me
-            + 'POST_MARKUP_TYPE as _markup, '
+            //+ 'POST_MARKUP_TYPE as _markup, '
 
             // maybe use this one to skip
-            + 'POST_IS_APPROVED as _approved '
+            //+ 'POST_IS_APPROVED as _approved '
 
-            + 'FROM ' + prefix + 'POSTS '
+            + 'FROM ' + prefix + 'be_message t1'
             // this post cannot be a its topic's main post, it MUST be a reply-post
             // see https://github.com/akhoury/nodebb-plugin-import#important-note-on-topics-and-posts
-            + 'WHERE POST_PARENT_ID > 0 '
+            + 'WHERE POSITION > 0 '
             + (start >= 0 && limit >= 0 ? 'LIMIT ' + start + ',' + limit : '');
 
 

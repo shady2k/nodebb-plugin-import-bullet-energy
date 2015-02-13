@@ -3,11 +3,11 @@ var fs = require('fs-extra');
 require('./index').testrun({
     dbhost: 'localhost',
     dbport: 3306,
-    dbname: 'ubb_db',
-    dbuser: 'user',
-    dbpass: 'password',
+    dbname: 'database_name',
+    dbuser: 'database_user',
+    dbpass: 'database_password',
 
-    tablePrefix: 'dle_be_'
+    tablePrefix: 'dle_'
 }, function(err, results) {
-    // fs.writeFileSync('./results.json', JSON.stringify(results, undefined, 2));
+    //fs.writeFileSync('./results.json', JSON.stringify(results, undefined, 2));
 });

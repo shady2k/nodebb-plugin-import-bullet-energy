@@ -37,20 +37,19 @@ var logPrefix = '[nodebb-plugin-import-bullet-energy]';
         var err;
         var prefix = Exporter.config('prefix');
         var startms = +new Date();
-        var query = 'SELECT '
-            'USER_ID as _uid, '
-            'NAME as _username, '
-            'FULLNAME as _alternativeUsername, '
-            'REG_DATE as _joindate, '
-            'EMAIL as _email, '
-            'IF(BANNED = "yes", 1, 0) as _banned, '			
-            'SIGNATURE as _signature, '
-            'LAND as _location, '
-            'CONCAT("http://mcfine.ru/uploads/fotos/", FOTO) as _picture '
-
-            + 'FROM ' + prefix + 'be_users '
-            + 'WHERE ' + (start >= 0 && limit >= 0 ? 'LIMIT ' + start + ',' + limit : '');
-
+        var query = 'SELECT ' +
+            'USER_ID as _uid, '+
+            'NAME as _username, '+
+            'FULLNAME as _alternativeUsername, '+
+            'REG_DATE as _joindate, '+
+            'EMAIL as _email, '+
+            'SIGNATURE as _signature, '+
+            'LAND as _location, '+
+            //'(FOTO <> "", CONCAT("http://your_url/", FOTO), NULL) as _picture '+
+            'FROM ' + prefix + 'users '+
+            'WHERE user_id in (SELECT DISTINCT autors_id FROM ' + prefix + 'be_message) '+
+            (start >= 0 && limit >= 0 ? 'LIMIT ' + start + ',' + limit : '');
+      Exporter.log(query);
 
         if (!Exporter.connection) {
             err = {error: 'MySQL connection is not setup. Run setup(config) first'};
@@ -71,17 +70,17 @@ var logPrefix = '[nodebb-plugin-import-bullet-energy]';
                     // nbb forces signatures to be less than 150 chars
                     // keeping it HTML see https://github.com/akhoury/nodebb-plugin-import#markdown-note
                     row._signature = Exporter.truncateStr(row._signature || '', 150);
-    
+
                     // from unix timestamp (s) to JS timestamp (ms)
                     row._joindate = ((row._joindate || 0) * 1000) || startms;
-    
+
                     // lower case the email for consistency
                     row._email = (row._email || '').toLowerCase();
-    
+
                     // I don't know about you about I noticed a lot my users have incomplete urls, urls like: http://
                     row._picture = Exporter.validateUrl(row._picture);
                     row._website = Exporter.validateUrl(row._website);
-    
+
                     map[row._uid] = row;
                 });
 
@@ -91,7 +90,7 @@ var logPrefix = '[nodebb-plugin-import-bullet-energy]';
 
 
     Exporter.getCategories = function(callback) {
-        return Exporter.getPaginatedCategories(0, -1, callback);    
+        return Exporter.getPaginatedCategories(0, -1, callback);
     };
     Exporter.getPaginatedCategories = function(start, limit, callback) {
         callback = !_.isFunction(callback) ? noop : callback;
@@ -100,11 +99,15 @@ var logPrefix = '[nodebb-plugin-import-bullet-energy]';
         var prefix = Exporter.config('prefix');
         var startms = +new Date();
         var query = 'SELECT '
-            'tree_id as _cid, '
-            'tree_title as _name '
+            + 'tree_id as _cid, '
+            + 'tree_title as _name, '
+            + '"" as _description, '
+            + 'tree_parent_id as _parentCid '
             + 'FROM ' + prefix + 'be_tree '
+            + 'ORDER BY tree_parent_id, tree_id ASC '
             + (start >= 0 && limit >= 0 ? 'LIMIT ' + start + ',' + limit : '');
 
+        Exporter.log(query);
 
         if (!Exporter.connection) {
             err = {error: 'MySQL connection is not setup. Run setup(config) first'};
@@ -122,10 +125,10 @@ var logPrefix = '[nodebb-plugin-import-bullet-energy]';
                 //normalize here
                 var map = {};
                 rows.forEach(function(row) {
-                    row._name = row._name || 'Без названия '
+                    row._name = row._name || ''
                     row._description = row._description || '';
                     row._timestamp = ((row._timestamp || 0) * 1000) || startms;
-    
+
                     map[row._cid] = row;
                 });
 
@@ -155,7 +158,7 @@ var logPrefix = '[nodebb-plugin-import-bullet-energy]';
             // remember: this post is EXCLUDED in the getPosts() function
             //+ prefix + 'TOPICS.POST_ID as _pid, '
 
-            + prefix + 'be_topic.author_id as _uid, '
+            + prefix + 'be_topic.autor_id as _uid, '
             + prefix + 'be_topic.view_count as _viewcount, '
             + prefix + 'be_topic.title as _title, '
             + prefix + 'be_topic.post_date as _timestamp, '
@@ -184,6 +187,8 @@ var logPrefix = '[nodebb-plugin-import-bullet-energy]';
             + 'AND ' + prefix + 'be_message.POSITION=0 '
             + (start >= 0 && limit >= 0 ? 'LIMIT ' + start + ',' + limit : '');
 
+        Exporter.log(query);
+
         if (!Exporter.connection) {
             err = {error: 'MySQL connection is not setup. Run setup(config) first'};
             Exporter.error(err.error);
@@ -203,7 +208,7 @@ var logPrefix = '[nodebb-plugin-import-bullet-energy]';
                 rows.forEach(function(row) {
                     row._title = row._title ? row._title[0].toUpperCase() + row._title.substr(1) : 'Untitled';
                     row._timestamp = ((row._timestamp || 0) * 1000) || startms;
-    
+
                     map[row._tid] = row;
                 });
 
@@ -237,12 +242,14 @@ var logPrefix = '[nodebb-plugin-import-bullet-energy]';
             // maybe use this one to skip
             //+ 'POST_IS_APPROVED as _approved '
 
-            + 'FROM ' + prefix + 'be_message t1'
+            + 'thanks as _votes '
+            + 'FROM ' + prefix + 'be_message t1 '
             // this post cannot be a its topic's main post, it MUST be a reply-post
             // see https://github.com/akhoury/nodebb-plugin-import#important-note-on-topics-and-posts
             + 'WHERE POSITION > 0 '
             + (start >= 0 && limit >= 0 ? 'LIMIT ' + start + ',' + limit : '');
 
+        Exporter.log(query);
 
         if (!Exporter.connection) {
             err = {error: 'MySQL connection is not setup. Run setup(config) first'};
@@ -299,7 +306,7 @@ var logPrefix = '[nodebb-plugin-import-bullet-energy]';
             }
         ], callback);
     };
-    
+
     Exporter.paginatedTestrun = function(config, callback) {
         async.series([
             function(next) {
@@ -334,7 +341,7 @@ var logPrefix = '[nodebb-plugin-import-bullet-energy]';
         args.unshift(logPrefix);
         console.log.apply(console, args);
     };
-    
+
     Exporter.error = function() {
         var args = _.toArray(arguments);
         args.unshift(logPrefix);
